@@ -14,6 +14,6 @@ def run_git(files, message, branch="main"):
     print("---------succesfully pushed------")
 
 # Example usage
-run_git(".", "implemented user login and register ", "main")
+run_git(".", "updated issues user login and register ", "main")
 
 

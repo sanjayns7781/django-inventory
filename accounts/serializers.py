@@ -66,7 +66,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         return data
 
 
-class LoginSerializer(serializers.TokenObtainPairSerializer):
+class LoginSerializer(TokenObtainPairSerializer):
 
     def validate(self, attrs):
         data = super().validate(attrs)
