@@ -1,11 +1,12 @@
 from django.shortcuts import render
 from rest_framework.views import APIView
-from .serializers import RegisterSerializer,LoginSerializer
+from .serializers import RegisterSerializer, LoginSerializer, ProfileSerializer
 from rest_framework.response import Response
 from rest_framework import status
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit # type: ignore
 import logging
+from .models import Role,User
 from rest_framework_simplejwt.views import TokenObtainPairView # pyright: ignore[reportMissingImports]
 
 logger = logging.getLogger(__name__)
@@ -62,3 +63,19 @@ class LoginView(TokenObtainPairView):
         if x_forwarded_for:
             return x_forwarded_for.split(',')[0]
         return request.META.get('REMOTE_ADDR')
+
+# Task 4: User Profile Management
+# GET /api/users/profile/    
+class ProfileManagementView(APIView):
+    def get(self,request):
+        user = User.objects.select_related('role').get(id=request.user.id)
+        serializer = ProfileSerializer(user)
+        return Response(serializer.data,status=201)
+
+# Task 5: User Management (Admin/Manager Only)
+# GET /api/users/
+class AllProfileManagemenetView(APIView):
+    def get(self,request):
+        users = User.objects.select_related('role').all()
+        serializer = ProfileSerializer(users,many=True)
+        return Response(serializer.data,status=201)

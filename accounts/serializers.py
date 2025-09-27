@@ -65,7 +65,6 @@ class RegisterSerializer(serializers.ModelSerializer):
         }
         return data
 
-
 class LoginSerializer(TokenObtainPairSerializer):
 
     def validate(self, attrs):
@@ -81,6 +80,18 @@ class LoginSerializer(TokenObtainPairSerializer):
 
         return data
 
+class ProfileSerializer(serializers.ModelSerializer):
+    role = serializers.SerializerMethodField()
+    class Meta:
+        model = User
+        fields = ['username','email','first_name','last_name','role']
 
+    def get_role(self, obj):
+        """Return role id and role name instead of just the FK id"""
+        if obj.role:  # make sure role exists
+            return {
+                "id": obj.role.id,
+                "name": obj.role.role_name
+            }
+        return None
 
-    
