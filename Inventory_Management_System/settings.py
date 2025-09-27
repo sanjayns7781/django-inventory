@@ -139,5 +139,5 @@ REST_FRAMEWORK = {
 
 }
 
-GEMINI_API_KEY = config("AIzaSyBOWKV7AeX41BoaFby7FjHd7rer43dsXTY")
+GEMINI_API_KEY = config("GEMINI_API_KEY")
 DEBUG = config("DEBUG", default=False, cast=bool)
