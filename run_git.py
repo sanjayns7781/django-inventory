@@ -14,6 +14,6 @@ def run_git(files, message, branch="main"):
     print("---------succesfully pushed------")
 
 # Example usage
-run_git(".", "get currecnt user and get all users have been implemented ", "main")
+run_git(".", "implemented an extrnal chat bot using gemini API", "main")
 
 

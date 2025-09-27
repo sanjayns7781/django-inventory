@@ -95,3 +95,5 @@ class ProfileSerializer(serializers.ModelSerializer):
             }
         return None
 
+class GeminiChatSerializer(serializers.Serializer):
+    message = serializers.CharField()

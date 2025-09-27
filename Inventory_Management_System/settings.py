@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -23,7 +24,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-6#b6&yhwn*eyr39x%)(@(_b62&=az&0mpe@_uw+e_il6l4&68y'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# DEBUG = True
 
 ALLOWED_HOSTS = []
 
@@ -137,3 +138,6 @@ REST_FRAMEWORK = {
     "PAGE_SIZE":15,
 
 }
+
+GEMINI_API_KEY = config("AIzaSyBOWKV7AeX41BoaFby7FjHd7rer43dsXTY")
+DEBUG = config("DEBUG", default=False, cast=bool)
