@@ -16,7 +16,7 @@ class Inventory(models.Model):
     is_active = models.BooleanField(default=True)
 
     class Meta:
-        db_table = 'inventory'
+        db_table = 'inventory_db'
 
     def __str__(self):
         return f"{self.name} - {self.category} - {self.price}"
