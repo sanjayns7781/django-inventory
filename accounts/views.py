@@ -130,6 +130,15 @@ class AllProfileManagemenetView(APIView):
             serializer.save()
             return Response(serializer.data,status=200)
         return Response(serializer.errors,status=400)
+    
+    def delete(self,request,id):
+        user = User.objects.filter(id=id).first()
+        if user:
+            user.is_active=False
+            user.save()
+            return Response(status=204)
+        else:
+            return Response({"detail": "There is no user with given id"},status=400)
 
 class GeminiChatView(APIView):
     """
