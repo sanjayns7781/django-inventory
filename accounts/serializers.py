@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer # type: ignore
 from rest_framework_simplejwt.tokens import RefreshToken # type: ignore
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, PermissionDenied
 import re
 from .models import User, Role
 
@@ -97,3 +97,23 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 class GeminiChatSerializer(serializers.Serializer):
     message = serializers.CharField()
+
+class UpdateProfileSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+    class Meta:
+        model = User
+        fields = ['username','role','first_name','last_name','email','password']
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop("password",None)
+        role = validated_data.get('role', None)
+        request = self.context.get("request",None)
+        if role:
+            user_role = request.user.role.role_name
+            if user_role != "ADMIN":
+                raise PermissionDenied("No permission")
+            
+        if password:
+            instance.set_password(password)
+        return super().update(instance, validated_data)
+    

@@ -1,7 +1,8 @@
 from django.shortcuts import render
 import requests
+from rest_framework.decorators import permission_classes
 from rest_framework.views import APIView
-from .serializers import RegisterSerializer, LoginSerializer, ProfileSerializer, GeminiChatSerializer
+from .serializers import RegisterSerializer, LoginSerializer, ProfileSerializer, GeminiChatSerializer, UpdateProfileSerializer
 from rest_framework.response import Response
 from rest_framework import status
 from django.utils.decorators import method_decorator
@@ -10,7 +11,10 @@ import logging
 from rest_framework.permissions import AllowAny
 from django.conf import settings
 from .models import Role,User
+from .permissions import IsAdmin, IsAdminOrManager, IsCustomer
+from django.db.models import Q
 from google import genai
+from django.shortcuts import get_object_or_404
 from rest_framework_simplejwt.views import TokenObtainPairView # pyright: ignore[reportMissingImports]
 
 logger = logging.getLogger(__name__)
@@ -70,20 +74,63 @@ class LoginView(TokenObtainPairView):
 
 # Task 4: User Profile Management
 # GET /api/users/profile/
+# PUT /api/users/profile/
 class ProfileManagementView(APIView):
     def get(self,request):
         user = User.objects.select_related('role').get(id=request.user.id)
         serializer = ProfileSerializer(user)
         return Response(serializer.data,status=201)
+    
+    def put(self,request):
+        user = User.objects.get(id=request.user.id)
+        serializer = UpdateProfileSerializer(instance=user,data=request.data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            logger.info(f"Details has been succesfully updated by {request.user.username}")
+            return Response(serializer.data,status=200)
+        return Response(serializer.errors,status=400)
 
 # Task 5: User Management (Admin/Manager Only)
 # GET /api/users/
 class AllProfileManagemenetView(APIView):
-    def get(self,request):
-        users = User.objects.select_related('role').all()
-        serializer = ProfileSerializer(users,many=True)
-        return Response(serializer.data,status=201)
+    @permission_classes([IsAdminOrManager])
+    def get(self,request,id=None):
+        if not id:
+            users = User.objects.select_related('role').all()
+
+            role = request.query_params.get('role',None)
+            if role:
+                users =users.filter(role=role)
+
+            is_active = request.query_params.get('is_active')
+            if is_active is not None:
+                users = users.filter(is_active=is_active.lower() in ['true', '1'])
+
+            search = request.query_params.get("search"  )
+            if search:
+                users = users.filter(
+                    Q(username__icontains=search)|
+                    Q(email__icontains=search)|
+                    Q(first_name__icontains=search)|
+                    Q(last_name__icontains=search)
+                )
+            serializer = ProfileSerializer(users,many=True)
+            return Response(serializer.data,status=201)
+        
+        else:
+            user = get_object_or_404(User.objects.select_related("role"), id=id)
+            serializer = ProfileSerializer(instance=user)
+            return Response(serializer.data,status=201)
     
+    @permission_classes([IsAdminOrManager])
+    def put(self,request,id):
+        user = get_object_or_404(User.objects.select_related('role', id=id))
+        serializer = UpdateProfileSerializer(instance=user,data=request.data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data,status=200)
+        return Response(serializer.errors,status=400)
+
 class GeminiChatView(APIView):
     """
     Accepts user message and returns a response from Google Gemini API.
