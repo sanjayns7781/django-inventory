@@ -181,7 +181,8 @@ class BulkOperations(APIView):
         response_serializer = InventoryQuantityUpdateModelSerializer(updated_items, many=True)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
 
-#  Export & Import (Admin/Manager Only)   
+#  Export & Import (Admin/Manager Only) 
+#   
 class Analytics(APIView):
     def get(self,request):
         export_format = request.query_params.get('format', 'json').lower()
