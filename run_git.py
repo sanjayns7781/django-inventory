@@ -14,6 +14,6 @@ def run_git(files, message, branch="main"):
     print("---------succesfully pushed------")
 
 # Example usage
-run_git(".", "Advanced Inventory Quries has been implemeneted", "main")
+run_git(".", "Every Operation including exporting and importing csv is done", "main")
 
 

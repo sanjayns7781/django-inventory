@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from rest_framework.views import APIView
-from .serializers import PostSerializer, GetSerializer, PutSerializer
+from .serializers import PostSerializer, GetSerializer, PutSerializer, BulkSerializer, InventoryQuantityUpdateModelSerializer, InventoryImportSerializer
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Inventory
@@ -9,8 +9,10 @@ from django.shortcuts import get_object_or_404
 from rest_framework.decorators import permission_classes
 from .permissions import IsAdmin,IsAdminOrManager
 from rest_framework.permissions import IsAuthenticated
-from django.db.models import Count
-from django.http import Http404
+from django.db.models import Count,Sum,F
+from django.http import Http404, HttpResponse, JsonResponse
+import csv,io,json
+
 # Create your views here.
 # Task 7: Inventory CRUD Operations
 # POST /api/inventory/
@@ -129,3 +131,89 @@ class GetBySupplier(APIView):
             raise Http404("No suppliers found")
         serializer = GetSerializer(items,many=True)
         return Response(serializer.data,status=200)
+    
+# Task 9: Inventory Statistics (Admin/Manager Only)
+# remaining 10,12,9
+
+class GetStatistics(APIView):
+    permission_classes = [IsAuthenticated,IsAdminOrManager]
+    def get(self,request):
+        total_items = Inventory.objects.count()
+        total_categories = Inventory.objects.values('category').distinct().count()
+        total_value = Inventory.objects.aggregate(total=Sum(F('price') * F('quantity')))['total'] or 0
+        low_stock_items = Inventory.objects.filter(quantity__lte=5, quantity__gt=0).count()
+        out_of_stock_items = Inventory.objects.filter(quantity=0).count()
+        top_categories = (
+            Inventory.objects
+            .values('category')
+            .annotate(count=Count('id'))
+            .order_by('-count')[:5]
+        )
+        data = {
+            "total_items": total_items,
+            "total_categories": total_categories,
+            "total_value": total_value,
+            "low_stock_items": low_stock_items,
+            "out_of_stock_items": out_of_stock_items,
+            "top_categories": top_categories,
+        }
+        return Response(data,status=200)
+
+class BulkOperations(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def post(self,request):
+        serializer = BulkSerializer(data=request.data,many=True,context={"request": request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def put(self, request):
+        serializer = InventoryQuantityUpdateModelSerializer(
+            data=request.data.get('updates'), many=True
+        )
+        serializer.is_valid(raise_exception=True)
+
+        updated_items = serializer.update_bulk()
+
+        # Serialize the updated objects for response
+        response_serializer = InventoryQuantityUpdateModelSerializer(updated_items, many=True)
+        return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+#  Export & Import (Admin/Manager Only)   
+class Analytics(APIView):
+    def get(self,request):
+        export_format = request.query_params.get('format', 'json').lower()
+        queryset = Inventory.objects.all()
+        serializer = GetSerializer(queryset, many=True)
+
+        if export_format == 'csv':
+            response = HttpResponse(content_type='text/csv')
+            response['Content-Disposition'] = 'attachment; filename="inventory.csv"'
+
+            writer = csv.writer(response)
+            writer.writerow(serializer.data[0].keys() if serializer.data else [])
+            for item in serializer.data:
+                writer.writerow(item.values())
+            return response
+        return JsonResponse(serializer.data, safe=False, status=200)
+
+    def post(self, request):
+        file = request.FILES.get('file')
+        if not file:
+            return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        decoded_file = file.read().decode('utf-8')
+        io_string = io.StringIO(decoded_file)
+        reader = csv.DictReader(io_string)
+        items = list(reader)
+        serializer = InventoryImportSerializer(data=items, many=True, context={"request": request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
