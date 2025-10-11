@@ -9,6 +9,8 @@ from django.shortcuts import get_object_or_404
 from rest_framework.decorators import permission_classes
 from .permissions import IsAdmin,IsAdminOrManager
 from rest_framework.permissions import IsAuthenticated
+from django.db.models import Count
+from django.http import Http404
 # Create your views here.
 # Task 7: Inventory CRUD Operations
 # POST /api/inventory/
@@ -91,4 +93,39 @@ class InventoryManagementWithId(APIView):
             return Response({"detail": "Successfully soft deleted"}, status=status.HTTP_204_NO_CONTENT)
         return Response({"detail": "You do not have permission to delete this item."},status=status.HTTP_403_FORBIDDEN)
 
-        
+# Task 8: Advanced Inventory Queries
+# Endpoint:GET /api/inventory/categories/
+# Endpoint:GET /api/inventory/low-stock/
+class GetBYCategories(APIView):
+    def get(self,request):
+        categories =(
+            Inventory.objects
+            .filter(is_active=True) # optional remove if want inactive items also
+            .values('category')
+            .annotate(count=Count('id'))
+            .order_by('category') 
+        )
+
+        return Response(categories, status=status.HTTP_200_OK)
+    
+class GetLowStock(APIView):
+    def get(self,request):
+        permission_classes = [IsAdminOrManager,IsAuthenticated]
+        threshold = request.query_params.get("threshold")
+        if threshold:
+            items = Inventory.objects.filter(quantity__lte=threshold)
+        else:
+            items = Inventory.objects.filter(quantity__lte=5)
+
+        serializer = GetSerializer(items,many=True)
+        return Response(serializer.data,status=200)
+    
+# GET /api/inventory/by-supplier/{supplier}/ 
+class GetBySupplier(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self,request,supplier):
+        items = Inventory.objects.filter(supplier=supplier)
+        if not items.exists():
+            raise Http404("No suppliers found")
+        serializer = GetSerializer(items,many=True)
+        return Response(serializer.data,status=200)
