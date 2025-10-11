@@ -9,7 +9,7 @@ class Role(models.Model):
         ("USER","USER"),
     ]
     role_name = models.CharField(max_length=120,choices=ROLE_CHOICES)
-    description = models.CharField(max_length=255)
+    description = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

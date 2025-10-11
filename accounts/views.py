@@ -2,7 +2,10 @@ from django.shortcuts import render
 import requests
 from rest_framework.decorators import permission_classes
 from rest_framework.views import APIView
-from .serializers import RegisterSerializer, LoginSerializer, ProfileSerializer, GeminiChatSerializer, UpdateProfileSerializer
+from .serializers import(
+    RegisterSerializer, LoginSerializer, ProfileSerializer, 
+    GeminiChatSerializer, UpdateProfileSerializer, RoleSerializer
+)
 from rest_framework.response import Response
 from rest_framework import status
 from django.utils.decorators import method_decorator
@@ -131,6 +134,7 @@ class AllProfileManagemenetView(APIView):
             return Response(serializer.data,status=200)
         return Response(serializer.errors,status=400)
     
+    @permission_classes([IsAdmin])
     def delete(self,request,id):
         user = User.objects.filter(id=id).first()
         if user:
@@ -139,6 +143,24 @@ class AllProfileManagemenetView(APIView):
             return Response(status=204)
         else:
             return Response({"detail": "There is no user with given id"},status=400)
+
+# Task 6: Role Management (Admin Only)
+# GET /api/roles/
+# POST /api/roles/
+class RoleView(APIView):
+    def get(request):
+        roles = Role.objects.all()
+        serializer = RoleSerializer(instance=roles,many=True)
+        return Response(serializer.data,status=200)
+
+    permission_classes([IsAdmin])
+    def post(self,request):
+        serializer = RoleSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data,status=201)
+        return Response(serializer.errors,status=400)
+
 
 class GeminiChatView(APIView):
     """
@@ -172,3 +194,4 @@ class GeminiChatView(APIView):
                 {"error": "Failed to get response from Gemini."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+        

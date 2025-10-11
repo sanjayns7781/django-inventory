@@ -117,3 +117,7 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
             instance.set_password(password)
         return super().update(instance, validated_data)
     
+class RoleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Role
+        fields = ['role_name']

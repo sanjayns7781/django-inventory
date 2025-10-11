@@ -14,6 +14,6 @@ def run_git(files, message, branch="main"):
     print("---------succesfully pushed------")
 
 # Example usage
-run_git(".", " soft delete has been done", "main")
+run_git(".", " sInventory items post request", "main")
 
 
